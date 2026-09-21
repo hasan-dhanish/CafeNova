@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { X, Sparkles, RotateCw, ZoomIn, ZoomOut, Check, ArrowRight } from 'lucide-react';
+import { X, Sparkles, RotateCw, ZoomIn, ZoomOut, Check, ArrowRight, Camera, Smartphone, QrCode } from 'lucide-react';
 import { ProductDto } from '@/types/menu';
 
 interface ArModelViewerProps {
@@ -19,19 +19,61 @@ export default function ArModelViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [autoRotate, setAutoRotate] = useState(true);
-  const [arSupported, setArSupported] = useState(false);
-  const [arActive, setArActive] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check WebXR AR support
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && (navigator as any).xr) {
-      (navigator as any).xr
-        .isSessionSupported('immersive-ar')
-        .then((supported: boolean) => setArSupported(supported))
-        .catch(() => setArSupported(false));
+  const handleLaunchAr = () => {
+    if (!product.arModelUrl) return;
+
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isAndroid = /android/i.test(ua);
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+
+    const fullModelUrl = product.arModelUrl.startsWith('http')
+      ? product.arModelUrl
+      : `${window.location.origin}${product.arModelUrl}`;
+
+    // Track AR interaction telemetry
+    fetch('/api/public/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'AR_INTERACT',
+        productId: product.id,
+        metadata: { platform: isAndroid ? 'android' : isIOS ? 'ios' : 'desktop' },
+      }),
+    }).catch(() => {});
+
+    if (isAndroid) {
+      // Launch Google Scene Viewer native AR on Android with ARCore
+      const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(
+        fullModelUrl
+      )}&mode=ar_preferred&title=${encodeURIComponent(
+        product.name
+      )}&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(
+        window.location.href
+      )};end;`;
+
+      window.location.href = intentUrl;
+      return;
     }
-  }, []);
+
+    if (isIOS) {
+      // Launch Apple QuickLook on iOS
+      const anchor = document.createElement('a');
+      anchor.setAttribute('rel', 'ar');
+      anchor.setAttribute('href', fullModelUrl);
+      const img = document.createElement('img');
+      anchor.appendChild(img);
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      return;
+    }
+
+    // On Desktop or unsupported devices, show QR code modal to scan with phone
+    setShowQrModal(true);
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -403,19 +445,28 @@ export default function ArModelViewer({
               </span>
             </div>
 
-            {/* Launch in WebXR AR if available on mobile */}
-            {arSupported && (
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => {
-                  alert('Launching WebXR AR Camera view for Table placement...');
-                }}
-                style={{ fontSize: '0.78rem' }}
-              >
-                <span>View on Table (AR)</span>
-              </button>
-            )}
+            {/* Launch Native AR Camera on Mobile */}
+            <button
+              type="button"
+              onClick={handleLaunchAr}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                backgroundColor: 'var(--primary-espresso)',
+                color: '#FAF7F2',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.55rem 0.95rem',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              <Camera size={15} color="#EBB682" />
+              <span>Place on Table (AR)</span>
+            </button>
           </div>
 
           {/* Action button preserving flow: QR -> Menu -> Product -> View in AR -> Customize -> Add to Cart -> Order */}
@@ -433,6 +484,83 @@ export default function ArModelViewer({
           </button>
         </div>
       </div>
+
+      {/* Desktop / Laptop Fallback QR Modal */}
+      {showQrModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            zIndex: 150,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setShowQrModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 'var(--radius-lg)',
+              padding: '2rem',
+              maxWidth: '380px',
+              textAlign: 'center',
+              boxShadow: 'var(--shadow-lg)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'var(--bg-main)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem',
+                color: 'var(--primary-espresso)',
+              }}
+            >
+              <Smartphone size={24} />
+            </div>
+
+            <h3 style={{ fontFamily: 'var(--font-heading)', color: 'var(--primary-espresso)', marginBottom: '0.5rem' }}>
+              View in AR on Your Phone
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Live Camera Augmented Reality requires a mobile device with ARCore (Android) or ARKit (iPhone).
+            </p>
+
+            <div
+              style={{
+                padding: '1rem',
+                backgroundColor: 'var(--bg-main)',
+                borderRadius: 'var(--radius-md)',
+                marginBottom: '1.25rem',
+                fontSize: '0.82rem',
+                color: 'var(--primary-espresso)',
+                wordBreak: 'break-all',
+              }}
+            >
+              Open this menu on your phone:
+              <br />
+              <strong>{typeof window !== 'undefined' ? window.location.href : ''}</strong>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setShowQrModal(false)}
+              style={{ width: '100%' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
