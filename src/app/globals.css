@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Color Palette - Restrained Artisan Café */
+  --bg-main: #FAF7F2;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #F4EFE6;
+  --bg-terracotta-subtle: #FDF3EE;
+  
+  --primary-terracotta: #A04322;
+  --primary-terracotta-hover: #883618;
+  --primary-espresso: #382319;
+  --primary-espresso-hover: #26160F;
+
+  --text-primary: #1F1A17;
+  --text-secondary: #5E564F;
+  --text-muted: #8A8177;
+  --text-inverse: #FFFFFF;
+
+  --border-subtle: #EBE5DC;
+  --border-strong: #D5CCC0;
+
+  /* Status Colors */
+  --status-green: #2E6F40;
+  --status-green-bg: #EAF4ED;
+  --status-amber: #B4681E;
+  --status-amber-bg: #FCF4EB;
+  --status-red: #B3261E;
+  --status-red-bg: #FDF2F2;
+  --status-slate: #515A6B;
+  --status-slate-bg: #EDF0F5;
+
+  /* Typography */
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Geometry & Elevation */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(42, 24, 16, 0.05);
+  --shadow-md: 0 4px 12px rgba(42, 24, 16, 0.08);
+  --shadow-lg: 0 8px 24px rgba(42, 24, 16, 0.12);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-body);
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--primary-espresso);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Common Layout Utilities */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.mobile-container {
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Button Component Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  border: 1px solid transparent;
+  min-height: 44px;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background-color: var(--primary-terracotta);
+  color: var(--text-inverse);
+  border-color: var(--primary-terracotta);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-terracotta-hover);
+  border-color: var(--primary-terracotta-hover);
+}
+
+.btn-dark {
+  background-color: var(--primary-espresso);
+  color: var(--text-inverse);
+  border-color: var(--primary-espresso);
+}
+
+.btn-dark:hover {
+  background-color: var(--primary-espresso-hover);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--primary-espresso);
+  border-color: var(--border-strong);
+}
+
+.btn-outline:hover {
+  background-color: var(--bg-surface-elevated);
+  border-color: var(--primary-espresso);
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  min-height: 34px;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.badge-veg {
+  background-color: var(--status-green-bg);
+  color: var(--status-green);
+  border: 1px solid rgba(46, 111, 64, 0.25);
+}
+
+.badge-vegan {
+  background-color: #E6F6F2;
+  color: #127559;
+  border: 1px solid rgba(18, 117, 89, 0.25);
+}
+
+.badge-gf {
+  background-color: var(--status-amber-bg);
+  color: var(--status-amber);
+  border: 1px solid rgba(180, 104, 30, 0.25);
+}
+
+/* Card */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
