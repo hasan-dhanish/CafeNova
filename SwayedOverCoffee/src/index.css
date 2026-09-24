@@ -857,31 +857,33 @@ button {
     width: clamp(260px, 68vw, 360px) !important;
   }
 
-  /* Compact title capsule with reduced empty space on left and right */
+  /* Compact title capsule with reduced empty space on left and right, moved more to the top */
   .chai-title-box {
-    top: clamp(19%, 21vh, 24%) !important;
+    top: clamp(12%, 14.5vh, 16.5%) !important;
     width: fit-content !important;
-    min-width: clamp(118px, 30vw, 150px) !important;
-    max-width: clamp(135px, 36vw, 165px) !important;
-    height: clamp(38px, 5.2vh, 44px) !important;
-    padding: 0.2rem clamp(0.65rem, 1.8vw, 0.95rem) !important;
+    min-width: clamp(130px, 32vw, 165px) !important;
+    max-width: clamp(145px, 38vw, 180px) !important;
+    height: clamp(44px, 6vh, 52px) !important;
+    padding: 0.25rem clamp(0.75rem, 2vw, 1.1rem) !important;
     z-index: 2 !important;
   }
 
+  /* Increased size of flavor text */
   .chai-title-text {
-    font-size: clamp(0.95rem, 3.8vw, 1.25rem) !important;
-    letter-spacing: 0.09em !important;
-    padding-left: 0.09em !important;
+    font-size: clamp(1.2rem, 4.6vw, 1.55rem) !important;
+    letter-spacing: 0.1em !important;
+    padding-left: 0.1em !important;
+    font-weight: 900 !important;
   }
 
-  /* Place the 4 ingredient squircle cards on the left and right of the Tea Flavour text */
+  /* Place the 4 ingredient squircle cards on the left and right of the Tea Flavour text, moved more to the top */
   .flavor-3d-carousel-container {
-    top: clamp(19%, 21vh, 24%) !important;
+    top: clamp(12%, 14.5vh, 16.5%) !important;
     bottom: auto !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
     width: 100% !important;
-    max-width: 420px !important;
+    max-width: 440px !important;
     padding: 0 clamp(0.35rem, 1.5vw, 0.75rem) !important;
     pointer-events: none !important;
     z-index: 15 !important;
@@ -891,14 +893,14 @@ button {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: clamp(5px, 1.6vw, 9px) !important;
+    gap: clamp(6px, 1.8vw, 10px) !important;
     width: 100% !important;
     padding: 0 !important;
   }
 
   .flavor-3d-center-gap {
     /* Perfectly matches the compact width of the Tea Flavour capsule */
-    width: clamp(125px, 33vw, 158px) !important;
+    width: clamp(138px, 35vw, 175px) !important;
     flex-shrink: 0 !important;
     pointer-events: none !important;
   }
@@ -906,7 +908,7 @@ button {
   .flavor-3d-wing {
     display: flex !important;
     align-items: center !important;
-    gap: clamp(5px, 1.5vw, 8px) !important;
+    gap: clamp(6px, 1.8vw, 10px) !important;
     pointer-events: auto !important;
     transform: none !important;
   }
@@ -915,20 +917,21 @@ button {
     display: none !important;
   }
 
+  /* Increased size for the other flavour icons */
   .flavor-card-squircle {
-    width: clamp(38px, 9.8vw, 45px) !important;
-    height: clamp(38px, 9.8vw, 45px) !important;
+    width: clamp(44px, 11.5vw, 52px) !important;
+    height: clamp(44px, 11.5vw, 52px) !important;
     transform: none !important;
   }
 
   .flavor-card-sketch-wrap {
-    width: clamp(28px, 7.5vw, 34px) !important;
-    height: clamp(28px, 7.5vw, 34px) !important;
+    width: clamp(34px, 9vw, 42px) !important;
+    height: clamp(34px, 9vw, 42px) !important;
   }
 
   .flavor-card-surface {
-    border-radius: 12px !important;
-    padding: 0.15rem !important;
+    border-radius: 14px !important;
+    padding: 0.2rem !important;
   }
 
   /* Move the Add to Cart bar a little up */
