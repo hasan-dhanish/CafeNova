@@ -287,31 +287,8 @@ export default function App() {
           })}
         </nav>
 
-        {/* Right Actions: Counter, Cart Trigger & Menu Button */}
+        {/* Right Actions: Cart Trigger & Menu Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.4rem, 1.2vw, 0.75rem)' }}>
-          {/* Counter Badge */}
-          <div
-            style={{
-              backgroundColor: 'rgba(20, 30, 16, 0.55)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '999px',
-              padding: 'clamp(0.32rem, 0.8vh, 0.45rem) clamp(0.65rem, 1.8vw, 0.95rem)',
-              fontSize: 'clamp(0.72rem, 1.8vw, 0.82rem)',
-              fontWeight: 700,
-              color: '#FAF7F0',
-              letterSpacing: '0.08em',
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <span>0{currentIndex + 1}</span>
-            <span style={{ color: 'rgba(255, 255, 255, 0.4)', margin: '0 0.3rem' }}>/</span>
-            <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>0{CHAI_ITEMS.length}</span>
-          </div>
-
           {/* Cart Header Button */}
           <button
             type="button"
