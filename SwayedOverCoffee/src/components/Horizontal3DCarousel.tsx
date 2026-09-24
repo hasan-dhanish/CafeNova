@@ -52,29 +52,23 @@ export const Horizontal3DCarousel: React.FC<Horizontal3DCarouselProps> = ({
           e.stopPropagation();
           onSelect(index, dir);
         }}
-        className={`flavor-apothecary-pill flavor-pill-wing-${wing} ${slideAnimClass}`}
+        className={`flavor-3d-card flavor-card-squircle flavor-card-wing-${wing} ${slideAnimClass}`}
         aria-label={`Select ${item.name} (${item.flavorTag})`}
         title={`Switch to ${item.name} - ${item.flavorTag}`}
       >
-        {/* Warm Backlight Glow Aura */}
-        <div className="flavor-pill-glow" />
+        {/* Ambient Floating Glow Shadow */}
+        <div className="flavor-card-shadow" />
 
-        {/* Frosted Amber Glass Apothecary Capsule */}
-        <div className="flavor-pill-capsule">
-          {/* Real Spice Pop 3D Stage (Floats out of the glass capsule) */}
-          <div className="flavor-pill-spice-stage">
+        {/* Card Surface Container */}
+        <div className="flavor-card-surface">
+          {/* Pencil-drawn Sketch Illustration */}
+          <div className="flavor-card-sketch-wrap">
             <img
-              src={item.popSpiceImage}
+              src={item.sketchImage}
               alt={item.name}
-              className="flavor-pill-spice-pop"
+              className="flavor-card-sketch-img"
               loading="eager"
             />
-          </div>
-
-          {/* Luxury Serif Monogram & Short Name Label */}
-          <div className="flavor-pill-meta">
-            <span className="flavor-pill-monogram">{item.monogram}</span>
-            <span className="flavor-pill-name">{item.shortName}</span>
           </div>
         </div>
       </button>

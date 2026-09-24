@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, ShoppingBag, Check, Trash2, X, Menu, Coffee, Sparkles, MapPin, Clock, Instagram, ExternalLink } from 'lucide-react';
 import { CHAI_ITEMS, ChaiItem } from './data/chaiData';
-import { Horizontal3DCarousel } from './components/Horizontal3DCarousel';
+import { TopFlavorSelector } from './components/TopFlavorSelector';
 
 const MENU_CATEGORIES = [
   { id: 'chai', name: 'Artisanal Chai', isAvailable: true },
@@ -402,52 +402,20 @@ export default function App() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
+          paddingTop: 'clamp(0.25rem, 1vh, 0.75rem)',
           paddingBottom: 'clamp(0.25rem, 1vh, 1.5rem)',
           zIndex: 10,
           overflow: 'visible',
         }}
       >
-        {/* Architectural Round-Ended Rectangle Box for the Text behind the Tea Glass */}
-        <div className="chai-title-box">
-          <div className="chai-title-box-glow" />
-
-          {prevChai && (
-            <div
-              key={`title-prev-${prevChai.id}-${transitionSeq}`}
-              className={`chai-title-sweep-item ${
-                direction === 'right' ? 'animate-text-sweep-out-left' : 'animate-text-sweep-out-right'
-              }`}
-            >
-              <span className="chai-title-text">
-                {prevChai.name.replace(' Chai', '')}
-              </span>
-            </div>
-          )}
-
-          <div
-            key={`title-curr-${activeChai.id}-${transitionSeq}`}
-            className={`chai-title-sweep-item ${
-              prevChai
-                ? direction === 'right'
-                  ? 'animate-text-sweep-in-right'
-                  : 'animate-text-sweep-in-left'
-                : ''
-            }`}
-          >
-            <span className="chai-title-text">
-              {activeChai.name.replace(' Chai', '')}
-            </span>
-          </div>
-        </div>
-
-        {/* Horizontal 3D Carousel flanking the central glass */}
-        <Horizontal3DCarousel
+        {/* Top Editorial Flavor Selector Bar (Matches user's reference design) */}
+        <TopFlavorSelector
           items={CHAI_ITEMS}
           activeIndex={currentIndex}
-          direction={direction}
-          transitionSeq={transitionSeq}
-          onSelect={changeChai}
+          onSelect={(index) => changeChai(index)}
+          onPrev={handlePrev}
+          onNext={handleNext}
         />
 
         {/* Foreground Chai Glass Visual Wrapper with Table Shadow */}
@@ -565,7 +533,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Floating Left and Right Navigation Buttons */}
+        {/* Floating Left and Right Navigation Buttons (Desktop auxiliary) */}
         <button
           type="button"
           onClick={(e) => {
@@ -574,7 +542,7 @@ export default function App() {
           }}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="Previous Chai"
-          className="nav-arrow-btn"
+          className="nav-arrow-btn desktop-only-arrow"
           style={{
             position: 'absolute',
             left: 'clamp(0.5rem, 2.5vw, 3rem)',
@@ -596,7 +564,7 @@ export default function App() {
           }}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="Next Chai"
-          className="nav-arrow-btn"
+          className="nav-arrow-btn desktop-only-arrow"
           style={{
             position: 'absolute',
             right: 'clamp(0.5rem, 2.5vw, 3rem)',
