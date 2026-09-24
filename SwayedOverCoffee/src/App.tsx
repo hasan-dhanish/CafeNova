@@ -222,22 +222,7 @@ export default function App() {
       onTouchEnd={onTouchEnd}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100vw',
-        height: '100vh',
-        minHeight: '100dvh',
-        backgroundImage: 'url(/chai/BG.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center bottom',
-        backgroundRepeat: 'no-repeat',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        boxShadow: 'inset 0 0 100px rgba(0, 0, 0, 0.4)',
-      }}
+      className="app-main-viewport"
     >
       {/* Top Header */}
       <header
@@ -552,6 +537,7 @@ export default function App() {
               <img
                 src={prevChai.image}
                 alt={prevChai.name}
+                className="chai-glass-img"
                 style={{
                   height: 'clamp(420px, 68vh, 840px)',
                   maxHeight: '76vh',
@@ -585,6 +571,7 @@ export default function App() {
             <img
               src={activeChai.image}
               alt={activeChai.name}
+              className="chai-glass-img"
               style={{
                 height: 'clamp(420px, 68vh, 840px)',
                 maxHeight: '76vh',
@@ -649,12 +636,13 @@ export default function App() {
 
       {/* Footer: Price & Add to Cart Bar */}
       <footer
+        className="app-footer-bar"
         style={{
           padding: 'clamp(0.6rem, 1.8vh, 1.4rem) 1rem calc(clamp(0.8rem, 2.4vh, 1.8rem) + env(safe-area-inset-bottom, 0px))',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          zIndex: 30,
+          zIndex: 40,
           width: '100%',
         }}
       >

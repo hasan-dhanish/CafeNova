@@ -829,62 +829,96 @@ button {
   box-shadow: 0 0 10px #E5C384;
 }
 
-/* Mobile Screens: Compact 3D Carousel Strip */
+/* App Viewport Container */
+.app-main-viewport {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height prevents clipping under mobile browser URL/navigation bars */
+  max-height: 100dvh;
+  background-image: url(/chai/BG.png);
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile Screens: Compact 3D Carousel Strip & Elevated Table Layout */
 @media (max-width: 768px) {
-  .tea-glass-backdrop {
-    width: clamp(230px, 62vw, 320px);
-    height: clamp(400px, 62vh, 560px);
-    border-radius: 36px;
+  /* Elevate the table higher up into view */
+  .app-main-viewport {
+    background-size: auto 128%;
+    background-position: center 100%;
   }
 
+  /* Scale chai glass so it rests neatly on the elevated table without pushing footer off-screen */
+  .chai-glass-img {
+    height: clamp(260px, 42vh, 370px) !important;
+    max-height: 44vh !important;
+  }
+
+  /* Center the title capsule behind the top portion of the glass */
+  .chai-title-box {
+    top: clamp(24%, 28vh, 32%) !important;
+    width: clamp(220px, 72vw, 300px) !important;
+    height: clamp(46px, 6.8vh, 58px) !important;
+  }
+
+  .chai-title-text {
+    font-size: clamp(1.15rem, 4.6vw, 1.6rem) !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  /* Position the 4 squircle cards cleanly on the wooden table surface right above the Add to Cart bar */
   .flavor-3d-carousel-container {
-    bottom: clamp(6px, 1.5vh, 18px);
+    top: auto !important;
+    bottom: clamp(62px, 9.2vh, 82px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 100% !important;
+    pointer-events: none !important;
   }
 
   .flavor-3d-desktop-track {
-    display: none;
+    display: none !important;
   }
 
   .flavor-3d-mobile-track {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: clamp(6px, 1.8vw, 10px);
-    width: 100%;
-    padding: 0 0.5rem;
-    pointer-events: auto;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: clamp(8px, 2.5vw, 14px) !important;
+    width: 100% !important;
+    padding: 0 0.5rem !important;
+    pointer-events: auto !important;
   }
 
   .flavor-card-squircle {
-    width: clamp(48px, 12vw, 58px);
-    height: clamp(48px, 12vw, 58px);
-  }
-
-  .flavor-card-active-rect {
-    width: clamp(140px, 38vw, 175px);
-    height: clamp(48px, 12vw, 58px);
+    width: clamp(48px, 12vw, 56px) !important;
+    height: clamp(48px, 12vw, 56px) !important;
+    transform: none !important;
   }
 
   .flavor-card-sketch-wrap {
-    width: clamp(38px, 9vw, 44px);
-    height: clamp(38px, 9vw, 44px);
+    width: clamp(36px, 9vw, 42px) !important;
+    height: clamp(36px, 9vw, 42px) !important;
   }
 
   .flavor-card-surface {
-    border-radius: 16px;
-    padding: 0.3rem 0.4rem;
+    border-radius: 16px !important;
+    padding: 0.25rem 0.35rem !important;
   }
 
-  .flavor-card-badge {
-    display: none;
-  }
-
-  .flavor-card-name {
-    font-size: 0.72rem;
-  }
-
-  .flavor-card-subtitle {
-    font-size: 0.58rem;
+  /* Footer: Ensure Add to Cart is always 100% visible, fully in view on mobile */
+  .app-footer-bar {
+    padding: clamp(0.35rem, 1vh, 0.65rem) 1rem calc(clamp(0.5rem, 1.4vh, 0.85rem) + env(safe-area-inset-bottom, 8px)) !important;
+    flex-shrink: 0 !important;
+    z-index: 40 !important;
   }
 }
 
