@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, ShoppingBag, Sparkles } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { FlavorVariant, CartItem } from '../types';
 
 interface ProductDetailsDrawerProps {

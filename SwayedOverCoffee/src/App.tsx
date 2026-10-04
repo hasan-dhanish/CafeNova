@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ShoppingBag, Check, Trash2, X, Menu, Coffee, Sparkles, MapPin, Clock, Instagram, ExternalLink } from 'lucide-react';
+import { ShoppingBag, Check, Trash2, X, Menu, Sparkles, MapPin, Clock, Instagram, ArrowRight } from 'lucide-react';
 import { CHAI_ITEMS, ChaiItem } from './data/chaiData';
-import { TopFlavorSelector } from './components/TopFlavorSelector';
+import { BottomFlavorDial } from './components/BottomFlavorDial';
 
 const MENU_CATEGORIES = [
   { id: 'chai', name: 'Artisanal Chai', isAvailable: true },
@@ -17,7 +17,7 @@ export default function App() {
   currentIndexRef.current = currentIndex;
 
   const [prevChai, setPrevChai] = useState<ChaiItem | null>(null);
-  const [direction, setDirection] = useState<'right' | 'left'>('right');
+  const [_direction, setDirection] = useState<'right' | 'left'>('right');
   const [transitionSeq, setTransitionSeq] = useState(0);
   const transitionTimerRef = useRef<any>(null);
 
@@ -31,6 +31,8 @@ export default function App() {
   const [addedAnimation, setAddedAnimation] = useState(false);
   const [cartBump, setCartBump] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [flyingParticle, setFlyingParticle] = useState<{ id: number; text: string } | null>(null);
+  const [stepperBump, setStepperBump] = useState<'plus' | 'minus' | null>(null);
 
   const activeChai = CHAI_ITEMS[currentIndex];
 
@@ -95,7 +97,7 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Add active chai to cart
+  // Add active chai to cart with celebratory particles
   const handleAddToCart = () => {
     setCart((prev) => ({
       ...prev,
@@ -103,8 +105,10 @@ export default function App() {
     }));
     setAddedAnimation(true);
     setCartBump(true);
+    setFlyingParticle({ id: Date.now(), text: `+${quantity}` });
+    setTimeout(() => setFlyingParticle(null), 950);
     setTimeout(() => setAddedAnimation(false), 1200);
-    setTimeout(() => setCartBump(false), 350);
+    setTimeout(() => setCartBump(false), 400);
   };
 
   const updateCartQty = (id: string, delta: number) => {
@@ -177,6 +181,10 @@ export default function App() {
 
   // Touch swipe gestures
   const onTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.bottom-flavor-dial-container, .bottom-dial-track, button, a, input, [role="button"]')) {
+      return;
+    }
     setTouchStartX(e.touches[0].clientX);
   };
 
@@ -197,7 +205,7 @@ export default function App() {
   // Mousepad / Mouse click & drag gesture
   const onPointerDown = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('button, a, input, [role="button"], .table-flavor-dish, .nav-arrow-btn')) {
+    if (target.closest('button, a, input, [role="button"], .table-flavor-dish, .nav-arrow-btn, .bottom-flavor-dial-container, .bottom-dial-track')) {
       return;
     }
     setPointerStartX(e.clientX);
@@ -224,6 +232,73 @@ export default function App() {
       onPointerUp={onPointerUp}
       className="app-main-viewport"
     >
+      {/* Idea 2: Unified Aspect-Ratio Stage Canvas (Locks Background + Glass to same coordinate space) */}
+      <div className="unified-stage-canvas" aria-hidden="true">
+        <img
+          src="/chai/cozy_tea_cafe_bg.png"
+          alt=""
+          className="unified-stage-bg"
+        />
+
+        {/* Glass Anchor locked to the Table Platter */}
+        <div className="unified-glass-anchor">
+          {/* Table Contact Shadow onto the wooden platter */}
+          <div className="split-table-shadow" />
+
+          {/* Ambient Warm Back Glow */}
+          <div className="split-back-glow" />
+
+          {/* Outgoing Chai Glass */}
+          {prevChai && (
+            <div
+              key={`glass-prev-${prevChai.id}-${transitionSeq}`}
+              className="glass-fade-out"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 2,
+                display: 'flex',
+                alignItems: 'flex-end',
+                justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <img
+                src={prevChai.image}
+                alt={prevChai.name}
+                className="split-glass-img"
+                style={{
+                  transform: prevChai.offsetY ? `translateY(${prevChai.offsetY}px)` : undefined,
+                }}
+              />
+            </div>
+          )}
+
+          {/* Incoming Active Chai Glass */}
+          <div
+            key={`glass-curr-${activeChai.id}-${transitionSeq}`}
+            className={prevChai ? 'glass-fade-in' : ''}
+            style={{
+              position: 'relative',
+              zIndex: 3,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <img
+              src={activeChai.image}
+              alt={activeChai.name}
+              className="split-glass-img"
+              style={{
+                transform: activeChai.offsetY ? `translateY(${activeChai.offsetY}px)` : undefined,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Top Header */}
       <header
         style={{
@@ -265,7 +340,6 @@ export default function App() {
               height: '100%',
               objectFit: 'contain',
               userSelect: 'none',
-              WebkitUserDrag: 'none',
             }}
           />
         </div>
@@ -393,349 +467,137 @@ export default function App() {
         </div>
       )}
 
-      {/* Center Stage: Chai Glass Resting on Table with Morphing Text Behind */}
-      <div
-        style={{
-          position: 'relative',
-          flex: 1,
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: 'clamp(0.25rem, 1vh, 0.75rem)',
-          paddingBottom: 'clamp(0.25rem, 1vh, 1.5rem)',
-          zIndex: 10,
-          overflow: 'visible',
-        }}
-      >
-        {/* Top Editorial Flavor Selector Bar (Matches user's reference design) */}
-        <TopFlavorSelector
-          items={CHAI_ITEMS}
-          activeIndex={currentIndex}
-          onSelect={(index) => changeChai(index)}
-          onPrev={handlePrev}
-          onNext={handleNext}
-        />
+      {/* Center Stage: Split Showcase (Chai on Wooden Platter Left, 3 Stacked Cards Right) */}
+      <main className="split-stage-container">
+        {/* Left Column Spacer: Reserves space for the anchored chai glass on the platter */}
+        <div className="split-image-col split-spacer-col" aria-hidden="true" />
 
-        {/* Foreground Chai Glass Visual Wrapper with Table Shadow */}
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'visible',
-            pointerEvents: 'none',
-          }}
-        >
-          {/* Grounded Wooden Table Contact Shadow - Smooth natural falloff without abrupt edges */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 'clamp(2px, 0.8vh, 8px)',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 'clamp(280px, 52vw, 680px)',
-              height: 'clamp(44px, 7vh, 76px)',
-              background: 'radial-gradient(ellipse 50% 40% at 50% 50%, rgba(10, 5, 2, 0.9) 0%, rgba(15, 8, 3, 0.42) 42%, transparent 70%)',
-              filter: 'blur(12px)',
-              zIndex: 1,
-              pointerEvents: 'none',
-            }}
-          />
+        {/* Right Column: 3 Stacked Sections matching Mockup */}
+        <div className="split-cards-col">
+          {/* Card 1: Tea Name */}
+          <div className="sketch-details-name-block">
+            <h1 className="pill-card-title">{activeChai.name}</h1>
+          </div>
 
-          {/* Soft ambient back glow behind the glass */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '38%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 'clamp(260px, 42vw, 540px)',
-              height: 'clamp(260px, 42vw, 540px)',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(229, 195, 132, 0.22) 0%, transparent 68%)',
-              filter: 'blur(45px)',
-              zIndex: 1,
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* Outgoing Chai Glass (Ease Out / Fade Out with zero position shift) */}
-          {prevChai && (
-            <div
-              key={`glass-prev-${prevChai.id}-${transitionSeq}`}
-              className="glass-fade-out"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'visible',
-                pointerEvents: 'none',
-              }}
-            >
-              <img
-                src={prevChai.image}
-                alt={prevChai.name}
-                className="chai-glass-img"
-                style={{
-                  height: 'clamp(420px, 68vh, 840px)',
-                  maxHeight: '76vh',
-                  width: 'auto',
-                  maxWidth: '92vw',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 25px 38px rgba(0, 0, 0, 0.48))',
-                  userSelect: 'none',
-                  WebkitUserDrag: 'none',
-                  pointerEvents: 'none',
-                  transform: prevChai.offsetY ? `translateY(clamp(16px, 3vh, ${prevChai.offsetY}px))` : undefined,
-                }}
-              />
+          {/* Card 2: Price Card */}
+          <div className="sketch-price-card">
+            <div className="price-info-left">
+              <span className="price-rupee-symbol">₹</span>
+              <span className="price-number">{activeChai.price}</span>
+              <span className="price-slash-cup">/ CUP</span>
             </div>
-          )}
+          </div>
 
-          {/* Incoming Chai Glass (Ease In / Fade In with zero position shift) */}
-          <div
-            key={`glass-curr-${activeChai.id}-${transitionSeq}`}
-            className={prevChai ? 'glass-fade-in' : ''}
-            style={{
-              position: 'relative',
-              zIndex: 3,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'visible',
-              pointerEvents: 'none',
-            }}
-          >
-            <img
-              src={activeChai.image}
-              alt={activeChai.name}
-              className="chai-glass-img"
-              style={{
-                height: 'clamp(420px, 68vh, 840px)',
-                maxHeight: '76vh',
-                width: 'auto',
-                maxWidth: '92vw',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 25px 38px rgba(0, 0, 0, 0.48))',
-                userSelect: 'none',
-                WebkitUserDrag: 'none',
-                pointerEvents: 'none',
-                transform: activeChai.offsetY ? `translateY(clamp(16px, 3vh, ${activeChai.offsetY}px))` : undefined,
-              }}
-            />
+          {/* Card 3: Stepper & Add to Cart Action */}
+          <div className="sketch-cart-action-bar">
+            {/* Stepper Quantity (- 1 +) */}
+            <div className="action-stepper-pill">
+              <button
+                type="button"
+                onClick={() => {
+                  setQuantity((q) => Math.max(1, q - 1));
+                  setStepperBump('minus');
+                  setTimeout(() => setStepperBump(null), 250);
+                }}
+                aria-label="Decrease quantity"
+                className="action-stepper-btn btn-minus"
+              >
+                –
+              </button>
+              <span className={`action-stepper-val ${stepperBump ? 'val-bump' : ''}`}>
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuantity((q) => q + 1);
+                  setStepperBump('plus');
+                  setTimeout(() => setStepperBump(null), 250);
+                }}
+                aria-label="Increase quantity"
+                className="action-stepper-btn btn-plus"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Add to Cart Action Button in warm gold */}
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className={`action-add-btn ${addedAnimation ? 'added-state' : ''}`}
+            >
+              {flyingParticle && (
+                <span key={flyingParticle.id} className="floating-cart-particle">
+                  {flyingParticle.text}
+                </span>
+              )}
+              {addedAnimation ? (
+                <>
+                  <Check size={16} strokeWidth={2.6} />
+                  <span>Added!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={15} strokeWidth={2.2} />
+                  <span>Add to Cart</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
+      </main>
 
-        {/* Floating Left and Right Navigation Buttons (Desktop auxiliary) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handlePrev();
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Previous Chai"
-          className="nav-arrow-btn desktop-only-arrow"
-          style={{
-            position: 'absolute',
-            left: 'clamp(0.5rem, 2.5vw, 3rem)',
-            top: '52%',
-            transform: 'translateY(-50%)',
-            zIndex: 50,
-            pointerEvents: 'auto',
-            cursor: 'pointer',
-          }}
-        >
-          <ChevronLeft size={24} />
-        </button>
+      {/* Bottom Flavor Dial Carousel: < (Classic) (Ginger) (Masala) (Elaichi) (Gulkand) > matching Mockup */}
+      <BottomFlavorDial
+        items={CHAI_ITEMS}
+        activeIndex={currentIndex}
+        onSelect={(index, forcedDir) => changeChai(index, forcedDir)}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        hasCheckoutBar={totalCartCount > 0}
+      />
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleNext();
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Next Chai"
-          className="nav-arrow-btn desktop-only-arrow"
-          style={{
-            position: 'absolute',
-            right: 'clamp(0.5rem, 2.5vw, 3rem)',
-            top: '52%',
-            transform: 'translateY(-50%)',
-            zIndex: 50,
-            pointerEvents: 'auto',
-            cursor: 'pointer',
-          }}
-        >
-          <ChevronRight size={24} />
-        </button>
-      </div>
-
-      {/* Footer: Price & Add to Cart Bar */}
-      <footer
-        className="app-footer-bar"
-        style={{
-          padding: 'clamp(0.6rem, 1.8vh, 1.4rem) 1rem calc(clamp(0.8rem, 2.4vh, 1.8rem) + env(safe-area-inset-bottom, 0px))',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 40,
-          width: '100%',
-        }}
+      {/* Super Cool Compact Floating Bottom Checkout Bar */}
+      <div
+        className={`floating-checkout-bar ${totalCartCount > 0 ? 'checkout-bar-visible' : ''}`}
+        aria-hidden={totalCartCount === 0}
       >
-        {/* Price & Add to Cart Action Bar */}
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'clamp(0.55rem, 1.8vw, 0.95rem)',
-            backgroundColor: 'rgba(20, 30, 16, 0.74)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.22)',
-            borderRadius: '999px',
-            padding: '0.35rem 0.45rem 0.35rem 1.15rem',
-            boxShadow: '0 12px 35px rgba(0, 0, 0, 0.55)',
-            zIndex: 32,
-            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          className="checkout-bar-inner"
+          onClick={() => setIsCartOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setIsCartOpen(true);
+            }
           }}
+          aria-label={`Checkout: ₹${cartSubtotal}`}
         >
-          {/* Price of Chai */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
-            <span
-              style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: 'clamp(1.2rem, 3.2vw, 1.45rem)',
-                fontWeight: 800,
-                color: '#E5C384',
-                letterSpacing: '-0.01em',
-                lineHeight: 1,
-              }}
-            >
-              ₹{activeChai.price}
-            </span>
-            <span
-              style={{
-                fontSize: '0.66rem',
-                fontWeight: 600,
-                color: 'rgba(250, 247, 240, 0.55)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              / cup
-            </span>
+          {/* Price */}
+          <div className="checkout-bar-left">
+            <span className="checkout-bar-price">₹{cartSubtotal}</span>
           </div>
 
-          {/* Stepper Quantity (- 1 +) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '999px',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
-              padding: '0.12rem 0.2rem',
-              gap: '0.15rem',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              aria-label="Decrease quantity"
-              style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FAF7F0',
-                fontSize: '1rem',
-                lineHeight: 1,
-                cursor: 'pointer',
-              }}
-            >
-              –
-            </button>
-            <span
-              style={{
-                width: '18px',
-                textAlign: 'center',
-                fontSize: '0.84rem',
-                fontWeight: 700,
-                color: '#FAF7F0',
-              }}
-            >
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => q + 1)}
-              aria-label="Increase quantity"
-              style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FAF7F0',
-                fontSize: '1rem',
-                lineHeight: 1,
-                cursor: 'pointer',
-              }}
-            >
-              +
-            </button>
-          </div>
-
-          {/* Add to Cart Button */}
+          {/* Right action: Checkout CTA button with animated arrow */}
           <button
             type="button"
-            onClick={handleAddToCart}
-            className="add-to-cart-btn"
-            style={{
-              background: addedAnimation
-                ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
-                : 'linear-gradient(135deg, #E5C384 0%, #C99D53 100%)',
-              color: addedAnimation ? '#FFFFFF' : '#172113',
-              fontWeight: 800,
-              fontSize: 'clamp(0.78rem, 1.8vw, 0.86rem)',
-              letterSpacing: '0.04em',
-              padding: '0.52rem 1.15rem',
-              borderRadius: '999px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: addedAnimation
-                ? '0 4px 18px rgba(76, 175, 80, 0.45)'
-                : '0 4px 18px rgba(229, 195, 132, 0.4)',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            className="checkout-bar-cta-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCartOpen(true);
             }}
+            aria-label="Proceed to Checkout"
           >
-            {addedAnimation ? (
-              <>
-                <Check size={16} strokeWidth={2.6} />
-                <span>Added!</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={16} strokeWidth={2.2} />
-                <span>Add to Cart</span>
-              </>
-            )}
+            <span className="checkout-bar-cta-text">Checkout</span>
+            <div className="checkout-bar-arrow-circle">
+              <ArrowRight size={14} strokeWidth={2.8} />
+            </div>
           </button>
         </div>
-      </footer>
+      </div>
+
 
       {/* Slide-over Cafe Menu & Directory Drawer */}
       {isMenuOpen && (

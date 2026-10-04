@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trash2, ArrowRight, CheckCircle2, Coffee } from 'lucide-react';
+import { X, ArrowRight, CheckCircle2, Coffee } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CartItem } from '../types';
 

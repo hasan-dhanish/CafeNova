@@ -33,3 +33,10 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Test files & large binaries
+*.mp4
+*.exe
+Cozy Tea Café in Golden Light.png
+*.local.png
+test_*.png

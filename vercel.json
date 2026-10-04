@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "cd SwayedOverCoffee && npm install",
+  "buildCommand": "cd SwayedOverCoffee && npm run build",
+  "outputDirectory": "SwayedOverCoffee/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
