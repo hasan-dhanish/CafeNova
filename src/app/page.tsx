@@ -1,382 +1,1246 @@
-import Link from 'next/link';
-import {
-  QrCode,
-  UtensilsCrossed,
-  MonitorCheck,
-  ShieldCheck,
-  ArrowRight,
-  CheckCircle2,
-  Grid,
-  PackageCheck,
-  BarChart3,
-  Coffee,
-  ExternalLink,
-} from 'lucide-react';
+'use client';
 
-export default function HomePage() {
+import React, { useState, useEffect, useRef } from 'react';
+import { ShoppingBag, Check, Trash2, X, Menu, Sparkles, MapPin, Clock, Instagram, ArrowRight } from 'lucide-react';
+import { CHAI_ITEMS, ChaiItem } from '@/data/chaiData';
+import { BottomFlavorDial } from '@/components/BottomFlavorDial';
+import './swayed.css';
+
+const MENU_CATEGORIES = [
+  { id: 'chai', name: 'Artisanal Chai', isAvailable: true },
+  { id: 'coffee', name: 'Specialty Coffee', isAvailable: false },
+  { id: 'coldbrew', name: 'Cold Brews', isAvailable: false },
+  { id: 'bakes', name: 'Bakes & Bites', isAvailable: false },
+  { id: 'story', name: 'Our Story', isAvailable: false },
+];
+
+export default function App() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+
+  const [prevChai, setPrevChai] = useState<ChaiItem | null>(null);
+  const [_direction, setDirection] = useState<'right' | 'left'>('right');
+  const [transitionSeq, setTransitionSeq] = useState(0);
+  const transitionTimerRef = useRef<any>(null);
+
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [pointerStartX, setPointerStartX] = useState<number | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [cart, setCart] = useState<{ [chaiId: string]: number }>({});
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [addedAnimation, setAddedAnimation] = useState(false);
+  const [cartBump, setCartBump] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [flyingParticle, setFlyingParticle] = useState<{ id: number; text: string } | null>(null);
+  const [stepperBump, setStepperBump] = useState<'plus' | 'minus' | null>(null);
+
+  const activeChai = CHAI_ITEMS[currentIndex];
+
+  const changeChai = (newIndex: number, forcedDir?: 'right' | 'left') => {
+    const current = currentIndexRef.current;
+    if (newIndex === current) return;
+
+    let dir = forcedDir;
+    if (!dir) {
+      let diff = newIndex - current;
+      if (diff > CHAI_ITEMS.length / 2) diff -= CHAI_ITEMS.length;
+      if (diff < -CHAI_ITEMS.length / 2) diff += CHAI_ITEMS.length;
+      dir = diff >= 0 ? 'right' : 'left';
+    }
+
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+    }
+
+    setPrevChai(CHAI_ITEMS[current]);
+    setDirection(dir);
+    setTransitionSeq((s) => s + 1);
+    setCurrentIndex(newIndex);
+    currentIndexRef.current = newIndex;
+    setQuantity(1);
+
+    transitionTimerRef.current = setTimeout(() => {
+      setPrevChai(null);
+    }, 650);
+  };
+
+  const handleNext = () => {
+    const current = currentIndexRef.current;
+    const nextIdx = (current + 1) % CHAI_ITEMS.length;
+    changeChai(nextIdx, 'right');
+  };
+
+  const handlePrev = () => {
+    const current = currentIndexRef.current;
+    const prevIdx = (current - 1 + CHAI_ITEMS.length) % CHAI_ITEMS.length;
+    changeChai(prevIdx, 'left');
+  };
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleCategoryClick = (cat: typeof MENU_CATEGORIES[0]) => {
+    if (cat.id === 'chai') {
+      // already on chai showcase
+      return;
+    }
+    if (cat.id === 'story') {
+      setIsMenuOpen(true);
+      return;
+    }
+    setToastMessage(`${cat.name} brews arriving soon! Enjoy our handcrafted Chai showcase today ☕`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Add active chai to cart with celebratory particles
+  const handleAddToCart = () => {
+    setCart((prev) => ({
+      ...prev,
+      [activeChai.id]: (prev[activeChai.id] || 0) + quantity,
+    }));
+    setAddedAnimation(true);
+    setCartBump(true);
+    setFlyingParticle({ id: Date.now(), text: `+${quantity}` });
+    setTimeout(() => setFlyingParticle(null), 950);
+    setTimeout(() => setAddedAnimation(false), 1200);
+    setTimeout(() => setCartBump(false), 400);
+  };
+
+  const updateCartQty = (id: string, delta: number) => {
+    setCart((prev) => {
+      const current = prev[id] || 0;
+      const next = current + delta;
+      if (next <= 0) {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      }
+      return { ...prev, [id]: next };
+    });
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+  };
+
+  const totalCartCount = Object.values(cart).reduce((sum, q) => sum + q, 0);
+  const cartSubtotal = Object.entries(cart).reduce((sum, [id, qty]) => {
+    const item = CHAI_ITEMS.find((c) => c.id === id);
+    return sum + (item ? item.price * qty : 0);
+  }, 0);
+  const taxes = Math.round(cartSubtotal * 0.05);
+  const grandTotal = cartSubtotal + taxes;
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') {
+        handleNext();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+        handlePrev();
+      } else if (e.key === 'Escape') {
+        setIsCartOpen(false);
+        setIsMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Mousepad / Trackpad two-finger horizontal swipe navigation
+  const lastWheelTimeRef = useRef(0);
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (isMenuOpen || isCartOpen) return;
+      const now = Date.now();
+      if (now - lastWheelTimeRef.current < 450) return;
+
+      // Two-finger horizontal scroll gesture on mousepad
+      if (Math.abs(e.deltaX) > 28) {
+        if (e.deltaX > 0) {
+          handleNext();
+        } else {
+          handlePrev();
+        }
+        lastWheelTimeRef.current = now;
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [isMenuOpen, isCartOpen]);
+
+  // Touch swipe gestures
+  const onTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.bottom-flavor-dial-container, .bottom-dial-track, button, a, input, [role="button"]')) {
+      return;
+    }
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchEndX - touchStartX;
+    if (Math.abs(diff) > 35) {
+      if (diff < 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
+    }
+    setTouchStartX(null);
+  };
+
+  // Mousepad / Mouse click & drag gesture
+  const onPointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, [role="button"], .table-flavor-dish, .nav-arrow-btn, .bottom-flavor-dial-container, .bottom-dial-track')) {
+      return;
+    }
+    setPointerStartX(e.clientX);
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (pointerStartX === null) return;
+    const diff = e.clientX - pointerStartX;
+    if (Math.abs(diff) > 40) {
+      if (diff < 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
+    }
+    setPointerStartX(null);
+  };
+
   return (
-    <div style={{ backgroundColor: 'var(--bg-main)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Navbar */}
-      <header
-        style={{
-          backgroundColor: 'var(--bg-surface)',
-          borderBottom: '1px solid var(--border-subtle)',
-          padding: '0.85rem 0',
-        }}
-      >
-        <div
-          className="container"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+    <div
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      className="app-main-viewport"
+    >
+      {/* Idea 2: Unified Aspect-Ratio Stage Canvas (Locks Background + Glass to same coordinate space) */}
+      <div className="unified-stage-canvas" aria-hidden="true">
+        <img
+          src="/chai/cozy_tea_cafe_bg.png"
+          alt=""
+          className="unified-stage-bg"
+        />
+
+        {/* Glass Anchor locked to the Table Platter */}
+        <div className="unified-glass-anchor">
+          {/* Table Contact Shadow onto the wooden platter */}
+          <div className="split-table-shadow" />
+
+          {/* Ambient Warm Back Glow */}
+          <div className="split-back-glow" />
+
+          {/* Outgoing Chai Glass */}
+          {prevChai && (
             <div
+              key={`glass-prev-${prevChai.id}-${transitionSeq}`}
+              className="glass-fade-out"
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--primary-espresso)',
+                position: 'absolute',
+                inset: 0,
+                zIndex: 2,
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-end',
                 justifyContent: 'center',
-                color: '#FAF7F2',
+                pointerEvents: 'none',
               }}
             >
-              <Coffee size={20} />
-            </div>
-            <div>
-              <span
+              <img
+                src={prevChai.image}
+                alt={prevChai.name}
+                className="split-glass-img"
                 style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontSize: '1.25rem',
-                  fontWeight: 700,
-                  color: 'var(--primary-espresso)',
-                  display: 'block',
-                  lineHeight: 1.1,
+                  transform: prevChai.offsetY ? `translateY(${prevChai.offsetY}px)` : undefined,
                 }}
-              >
-                CaféNova
-              </span>
-              <span
-                style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  color: 'var(--primary-terracotta)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                Smart Café Platform
-              </span>
+              />
             </div>
-          </div>
+          )}
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Link href="/menu?table=T01" className="btn btn-outline btn-sm">
-              <span>Open Menu Card</span>
-              <ExternalLink size={13} />
-            </Link>
-            <Link href="/admin" className="btn btn-dark btn-sm">
-              <span>Café Management</span>
-              <ArrowRight size={13} />
-            </Link>
+          {/* Incoming Active Chai Glass */}
+          <div
+            key={`glass-curr-${activeChai.id}-${transitionSeq}`}
+            className={prevChai ? 'glass-fade-in' : ''}
+            style={{
+              position: 'relative',
+              zIndex: 3,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <img
+              src={activeChai.image}
+              alt={activeChai.name}
+              className="split-glass-img"
+              style={{
+                transform: activeChai.offsetY ? `translateY(${activeChai.offsetY}px)` : undefined,
+              }}
+            />
           </div>
+        </div>
+      </div>
+
+      {/* Top Header */}
+      <header
+        style={{
+          padding: 'clamp(0.85rem, 2vh, 1.5rem) clamp(1rem, 3.5vw, 2.5rem)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 30,
+          pointerEvents: 'auto',
+          width: '100%',
+        }}
+      >
+        {/* Brand: Bigger Official Logo */}
+        <div
+          style={{
+            width: 'clamp(62px, 7.8vw, 84px)',
+            height: 'clamp(62px, 7.8vw, 84px)',
+            borderRadius: '50%',
+            backgroundColor: '#FAF7F0',
+            backgroundImage: 'radial-gradient(circle, #FAF7F0 75%, #F4ECE0 100%)',
+            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(180, 140, 80, 0.18)',
+            border: '1.5px solid rgba(229, 195, 132, 0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '3px',
+            flexShrink: 0,
+            cursor: 'pointer',
+            transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+          onClick={() => setCurrentIndex(0)}
+          title="Swayed Over Coffee - Home"
+        >
+          <img
+            src="/chai/soc_logo_bg.png"
+            alt="Swayed Over Coffee Logo"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              userSelect: 'none',
+            }}
+          />
+        </div>
+
+        {/* Desktop Central Menu Bar */}
+        <nav className="header-menu-bar" aria-label="Main Navigation">
+          {MENU_CATEGORIES.map((cat) => {
+            const isActive = cat.id === 'chai';
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => handleCategoryClick(cat)}
+                className={`menu-nav-pill ${isActive ? 'active' : ''}`}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Right Actions: Cart Trigger & Menu Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.4rem, 1.2vw, 0.75rem)' }}>
+          {/* Cart Header Button */}
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className={`cart-trigger-btn ${cartBump ? 'cart-bump' : ''}`}
+            aria-label="View Cart"
+            style={{
+              backgroundColor: totalCartCount > 0 ? 'rgba(229, 195, 132, 0.92)' : 'rgba(20, 30, 16, 0.55)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: totalCartCount > 0 ? '1px solid #E5C384' : '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '999px',
+              padding: 'clamp(0.32rem, 0.8vh, 0.45rem) clamp(0.65rem, 1.8vw, 0.95rem)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              color: totalCartCount > 0 ? '#172113' : '#FAF7F0',
+              fontWeight: 800,
+              fontSize: 'clamp(0.72rem, 1.8vw, 0.82rem)',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.25s ease',
+            }}
+          >
+            <ShoppingBag size={15} />
+            <span>Cart</span>
+            {totalCartCount > 0 && (
+              <span
+                style={{
+                  backgroundColor: '#172113',
+                  color: '#FAF7F0',
+                  borderRadius: '999px',
+                  padding: '0.08rem 0.45rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  marginLeft: '2px',
+                }}
+              >
+                {totalCartCount}
+              </span>
+            )}
+          </button>
+
+          {/* Menu Drawer Button */}
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen(true)}
+            aria-label="Open Cafe Menu"
+            style={{
+              backgroundColor: 'rgba(20, 30, 16, 0.55)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '999px',
+              padding: 'clamp(0.32rem, 0.8vh, 0.45rem) clamp(0.7rem, 1.8vw, 1rem)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              color: '#FAF7F0',
+              fontWeight: 700,
+              fontSize: 'clamp(0.72rem, 1.8vw, 0.82rem)',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.25s ease',
+            }}
+          >
+            <Menu size={16} />
+            <span>Menu</span>
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container" style={{ padding: '3.5rem 1rem', flex: 1 }}>
-        {/* Hero Section */}
-        <section
+      {/* Floating Notice Toast */}
+      {toastMessage && (
+        <div
           style={{
-            maxWidth: '820px',
-            margin: '0 auto 3.5rem auto',
+            position: 'fixed',
+            top: '5.5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 90,
+            backgroundColor: 'rgba(20, 30, 16, 0.92)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(229, 195, 132, 0.5)',
+            color: '#FAF7F0',
+            padding: '0.65rem 1.25rem',
+            borderRadius: '999px',
+            fontSize: '0.86rem',
+            fontWeight: 600,
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+            animation: 'fadeIn 0.25s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            maxWidth: '90vw',
             textAlign: 'center',
           }}
         >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.35rem 0.85rem',
-              borderRadius: 'var(--radius-full)',
-              backgroundColor: 'var(--bg-terracotta-subtle)',
-              color: 'var(--primary-terracotta)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              marginBottom: '1.25rem',
-              border: '1px solid rgba(160, 67, 34, 0.2)',
-            }}
-          >
-            <ShieldCheck size={16} />
-            <span>Integrated Dual-App Operating System</span>
+          <Sparkles size={16} color="#E5C384" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Center Stage: Split Showcase (Chai on Wooden Platter Left, 3 Stacked Cards Right) */}
+      <main className="split-stage-container">
+        {/* Left Column Spacer: Reserves space for the anchored chai glass on the platter */}
+        <div className="split-image-col split-spacer-col" aria-hidden="true" />
+
+        {/* Right Column: 3 Stacked Sections matching Mockup */}
+        <div className="split-cards-col">
+          {/* Card 1: Tea Name */}
+          <div className="sketch-details-name-block">
+            <h1 className="pill-card-title">{activeChai.name}</h1>
           </div>
 
-          <h1
-            style={{
-              fontSize: 'clamp(2.1rem, 4vw, 3rem)',
-              fontWeight: 700,
-              lineHeight: 1.15,
-              marginBottom: '1.25rem',
-              color: 'var(--primary-espresso)',
-            }}
-          >
-            Two specialized WebApps. One authoritative engine.
-          </h1>
+          {/* Card 2: Price Card */}
+          <div className="sketch-price-card">
+            <div className="price-info-left">
+              <span className="price-rupee-symbol">₹</span>
+              <span className="price-number">{activeChai.price}</span>
+              <span className="price-slash-cup">/ CUP</span>
+            </div>
+          </div>
 
-          <p
-            style={{
-              fontSize: '1.15rem',
-              lineHeight: 1.6,
-              color: 'var(--text-secondary)',
-              maxWidth: '680px',
-              marginInline: 'auto',
-            }}
-          >
-            A dedicated, frictionless <strong>Menu Card WebApp</strong> for dining customers and a robust <strong>Café Management WebApp</strong> for kitchen, table, stock, and business operations.
-          </p>
-        </section>
-
-        {/* The Two Dedicated WebApps Grid */}
-        <section
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-            gap: '2rem',
-            marginBottom: '4rem',
-          }}
-        >
-          {/* App 1: Menu Card WebApp */}
-          <div
-            className="card"
-            style={{
-              padding: '2rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              borderTop: '5px solid var(--primary-terracotta)',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  backgroundColor: 'var(--bg-terracotta-subtle)',
-                  color: 'var(--primary-terracotta)',
-                  padding: '0.25rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                  marginBottom: '1rem',
+          {/* Card 3: Stepper & Add to Cart Action */}
+          <div className="sketch-cart-action-bar">
+            {/* Stepper Quantity (- 1 +) */}
+            <div className="action-stepper-pill">
+              <button
+                type="button"
+                onClick={() => {
+                  setQuantity((q) => Math.max(1, q - 1));
+                  setStepperBump('minus');
+                  setTimeout(() => setStepperBump(null), 250);
                 }}
+                aria-label="Decrease quantity"
+                className="action-stepper-btn btn-minus"
               >
-                <QrCode size={14} />
-                <span>CUSTOMER FACING</span>
-              </div>
-
-              <h2 style={{ fontSize: '1.6rem', marginBottom: '0.75rem', color: 'var(--primary-espresso)' }}>
-                Menu Card WebApp
-              </h2>
-
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.55, marginBottom: '1.5rem' }}>
-                Dedicated digital menu experience for seated customers. Zero app download required. Diners scan their table QR code, browse recipes, filter dietary preferences, customize items, and track order fulfillment live.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span>Table identification &amp; signed QR routing</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span>Instant search &amp; dietary filtering (Veg, Vegan, GF)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span>Single/multi-select recipe customizations &amp; add-ons</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span>Persistent cart &amp; server-authoritative pricing</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span>Live order tracking &amp; preparation countdown</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <Link href="/menu?table=T01" className="btn btn-primary" style={{ flex: 1 }}>
-                  <span>Launch Menu (Table T01)</span>
-                  <ArrowRight size={16} />
-                </Link>
-                <Link href="/menu?table=T02" className="btn btn-outline btn-sm">
-                  <span>Table T02</span>
-                </Link>
-                <Link href="/menu?table=T03" className="btn btn-outline btn-sm">
-                  <span>Table T03</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* App 2: Café Management WebApp */}
-          <div
-            className="card"
-            style={{
-              padding: '2rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              borderTop: '5px solid var(--primary-espresso)',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  color: 'var(--primary-espresso)',
-                  padding: '0.25rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                  marginBottom: '1rem',
+                –
+              </button>
+              <span className={`action-stepper-val ${stepperBump ? 'val-bump' : ''}`}>
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuantity((q) => q + 1);
+                  setStepperBump('plus');
+                  setTimeout(() => setStepperBump(null), 250);
                 }}
+                aria-label="Increase quantity"
+                className="action-stepper-btn btn-plus"
               >
-                <MonitorCheck size={14} />
-                <span>OPERATIONS &amp; STAFF</span>
-              </div>
-
-              <h2 style={{ fontSize: '1.6rem', marginBottom: '0.75rem', color: 'var(--primary-espresso)' }}>
-                Café Management WebApp
-              </h2>
-
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.55, marginBottom: '1.5rem' }}>
-                Unified operations console for managers, baristas, and floor runners. Features high-contrast kitchen ticket flow, interactive floor table map, dynamic catalog availability, and real inventory alerts.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span><strong>Kitchen Display System (KDS)</strong> with elapsed timers</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span><strong>Table Management</strong> &amp; printable QR code generator</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span><strong>Menu Catalog Editor</strong> &amp; live 86'd availability toggle</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span><strong>Basic Inventory</strong> &amp; low-threshold restock alerts</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem' }}>
-                  <CheckCircle2 size={16} color="var(--status-green)" />
-                  <span><strong>Sales &amp; Analytics</strong> with authoritative revenue metrics</span>
-                </div>
-              </div>
+                +
+              </button>
             </div>
 
-            <div>
-              <Link href="/admin" className="btn btn-dark" style={{ width: '100%' }}>
-                <span>Enter Café Management Console</span>
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Quick Workstation Links */}
-        <section
-          style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary-espresso)' }}>
-              Direct Workstation Shortcuts
-            </span>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
-              Jump straight to any operational station in the Management WebApp:
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <Link href="/admin/kds" className="btn btn-outline btn-sm">
-              <MonitorCheck size={14} />
-              <span>Kitchen KDS</span>
-            </Link>
-            <Link href="/admin/tables" className="btn btn-outline btn-sm">
-              <Grid size={14} />
-              <span>Table QR Map</span>
-            </Link>
-            <Link href="/admin/menu" className="btn btn-outline btn-sm">
-              <UtensilsCrossed size={14} />
-              <span>Menu Editor</span>
-            </Link>
-            <Link href="/admin/inventory" className="btn btn-outline btn-sm">
-              <PackageCheck size={14} />
-              <span>Stock Tracker</span>
-            </Link>
-            <Link href="/admin/analytics" className="btn btn-outline btn-sm">
-              <BarChart3 size={14} />
-              <span>Analytics</span>
-            </Link>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer
-        style={{
-          backgroundColor: 'var(--bg-surface)',
-          borderTop: '1px solid var(--border-subtle)',
-          padding: '1.5rem 0',
-          fontSize: '0.85rem',
-          color: 'var(--text-secondary)',
-        }}
-      >
-        <div
-          className="container"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <strong>CaféNova Operations Platform</strong> &bull; Production Ready
-          </div>
-          <div style={{ display: 'flex', gap: '1.25rem' }}>
-            <Link href="/api/health" target="_blank" style={{ color: 'var(--primary-terracotta)' }}>
-              Health Check API
-            </Link>
+            {/* Add to Cart Action Button in warm gold */}
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className={`action-add-btn ${addedAnimation ? 'added-state' : ''}`}
+            >
+              {flyingParticle && (
+                <span key={flyingParticle.id} className="floating-cart-particle">
+                  {flyingParticle.text}
+                </span>
+              )}
+              {addedAnimation ? (
+                <>
+                  <Check size={16} strokeWidth={2.6} />
+                  <span>Added!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={15} strokeWidth={2.2} />
+                  <span>Add to Cart</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
-      </footer>
+      </main>
+
+      {/* Bottom Flavor Dial Carousel: < (Classic) (Ginger) (Masala) (Elaichi) (Gulkand) > matching Mockup */}
+      <BottomFlavorDial
+        items={CHAI_ITEMS}
+        activeIndex={currentIndex}
+        onSelect={(index, forcedDir) => changeChai(index, forcedDir)}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        hasCheckoutBar={totalCartCount > 0}
+      />
+
+      {/* Super Cool Compact Floating Bottom Checkout Bar */}
+      <div
+        className={`floating-checkout-bar ${totalCartCount > 0 ? 'checkout-bar-visible' : ''}`}
+        aria-hidden={totalCartCount === 0}
+      >
+        <div
+          className="checkout-bar-inner"
+          onClick={() => setIsCartOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setIsCartOpen(true);
+            }
+          }}
+          aria-label={`Checkout: ₹${cartSubtotal}`}
+        >
+          {/* Price */}
+          <div className="checkout-bar-left">
+            <span className="checkout-bar-price">₹{cartSubtotal}</span>
+          </div>
+
+          {/* Right action: Checkout CTA button with animated arrow */}
+          <button
+            type="button"
+            className="checkout-bar-cta-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCartOpen(true);
+            }}
+            aria-label="Proceed to Checkout"
+          >
+            <span className="checkout-bar-cta-text">Checkout</span>
+            <div className="checkout-bar-arrow-circle">
+              <ArrowRight size={14} strokeWidth={2.8} />
+            </div>
+          </button>
+        </div>
+      </div>
+
+
+      {/* Slide-over Cafe Menu & Directory Drawer */}
+      {isMenuOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            justifyContent: 'flex-start',
+            animation: 'fadeIn 0.25s ease',
+          }}
+          onClick={() => setIsMenuOpen(false)}
+        >
+          <div
+            style={{
+              width: 'min(400px, 88vw)',
+              height: '100%',
+              backgroundColor: '#12190F',
+              backgroundImage: 'radial-gradient(circle at top left, rgba(229, 195, 132, 0.15) 0%, transparent 60%)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.14)',
+              padding: 'clamp(1.2rem, 3vh, 1.8rem)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '10px 0 40px rgba(0, 0, 0, 0.7)',
+              animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Menu Drawer Header */}
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: '1.2rem',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FAF7F0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '2px',
+                      border: '1px solid rgba(229, 195, 132, 0.6)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    <img
+                      src="/chai/soc_logo_bg.png"
+                      alt="Swayed Over Coffee"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </div>
+                  <div>
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-serif)',
+                        fontSize: '1.2rem',
+                        fontWeight: 800,
+                        color: '#FAF7F0',
+                        letterSpacing: '-0.01em',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      SWAYED
+                    </h3>
+                    <span style={{ fontSize: '0.68rem', color: '#E0CCA7', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Over Coffee • Chennai
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen(false)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FAF7F0',
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Close menu"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Menu Categories List */}
+              <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#E5C384', fontWeight: 700 }}>
+                  Offerings & Showcase
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen(false)}
+                  style={{
+                    backgroundColor: 'rgba(229, 195, 132, 0.18)',
+                    border: '1px solid rgba(229, 195, 132, 0.45)',
+                    borderRadius: '14px',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    color: '#FAF7F0',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div>
+                    <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#E5C384' }}>Artisanal Chai</h4>
+                    <p style={{ fontSize: '0.78rem', color: 'rgba(250, 247, 240, 0.65)', marginTop: '2px' }}>
+                      Orthodox cuts, elaichi, ginger & spice blends (Active)
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', backgroundColor: '#E5C384', color: '#172113', padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 800 }}>
+                    Live
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setToastMessage('Specialty Coffee collection unlocking soon!');
+                    setTimeout(() => setToastMessage(null), 2500);
+                  }}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '14px',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    color: '#FAF7F0',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div>
+                    <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#FAF7F0' }}>Specialty Coffee</h4>
+                    <p style={{ fontSize: '0.78rem', color: 'rgba(250, 247, 240, 0.6)', marginTop: '2px' }}>
+                      Pour-overs, flat whites, single-estate Arabica
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(250, 247, 240, 0.45)', fontWeight: 600 }}>
+                    Soon
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setToastMessage('Nitro & Cascara Cold Brews coming soon!');
+                    setTimeout(() => setToastMessage(null), 2500);
+                  }}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '14px',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    color: '#FAF7F0',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div>
+                    <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#FAF7F0' }}>Cold Brews & Matcha</h4>
+                    <p style={{ fontSize: '0.78rem', color: 'rgba(250, 247, 240, 0.6)', marginTop: '2px' }}>
+                      18-hour slow steep & ceremonial green tea
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(250, 247, 240, 0.45)', fontWeight: 600 }}>
+                    Soon
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setToastMessage('Artisanal bakery menu updating soon!');
+                    setTimeout(() => setToastMessage(null), 2500);
+                  }}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '14px',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    color: '#FAF7F0',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div>
+                    <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#FAF7F0' }}>Bakes & Bites</h4>
+                    <p style={{ fontSize: '0.78rem', color: 'rgba(250, 247, 240, 0.6)', marginTop: '2px' }}>
+                      Sourdough croissants, tea cakes & savoury puffs
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(250, 247, 240, 0.45)', fontWeight: 600 }}>
+                    Soon
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Menu Drawer Footer: Visit & Hours */}
+            <div
+              style={{
+                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                paddingTop: '1.2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: 'rgba(250, 247, 240, 0.7)', fontSize: '0.82rem' }}>
+                <MapPin size={15} color="#E5C384" />
+                <span>Chennai, Tamil Nadu</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: 'rgba(250, 247, 240, 0.7)', fontSize: '0.82rem' }}>
+                <Clock size={15} color="#E5C384" />
+                <span>Open Daily: 7:00 AM – 11:00 PM</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: 'rgba(250, 247, 240, 0.7)', fontSize: '0.82rem' }}>
+                <Instagram size={15} color="#E5C384" />
+                <span>@swayedovercoffee</span>
+              </div>
+              <p style={{ fontSize: '0.74rem', color: 'rgba(250, 247, 240, 0.45)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                "Where slow brewing meets soulful conversations. Make your mark."
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Slide-over Cart Drawer */}
+      {isCartOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            animation: 'fadeIn 0.25s ease',
+          }}
+          onClick={() => setIsCartOpen(false)}
+        >
+          <div
+            style={{
+              width: 'min(420px, 92vw)',
+              height: '100%',
+              backgroundColor: '#141C11',
+              backgroundImage: 'radial-gradient(circle at top right, rgba(229, 195, 132, 0.12) 0%, transparent 60%)',
+              borderLeft: '1px solid rgba(255, 255, 255, 0.14)',
+              padding: 'clamp(1.2rem, 3vh, 1.8rem)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.7)',
+              animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: '1.2rem',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FAF7F0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '2px',
+                      border: '1px solid rgba(229, 195, 132, 0.5)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    <img
+                      src="/chai/soc_logo_bg.png"
+                      alt="Swayed Over Coffee"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </div>
+                  <div>
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-serif)',
+                        fontSize: '1.25rem',
+                        fontWeight: 800,
+                        color: '#FAF7F0',
+                        letterSpacing: '-0.01em',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      Your Order
+                    </h3>
+                    <span style={{ fontSize: '0.72rem', color: '#E0CCA7', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Swayed Over Coffee
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                      padding: '0.15rem 0.55rem',
+                      borderRadius: '999px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      color: '#E5C384',
+                      marginLeft: 'auto',
+                    }}
+                  >
+                    {totalCartCount}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCartOpen(false)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FAF7F0',
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Close cart"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Cart Item List */}
+              <div
+                style={{
+                  marginTop: '1.2rem',
+                  maxHeight: 'calc(100vh - 310px)',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                  paddingRight: '0.2rem',
+                }}
+              >
+                {Object.keys(cart).length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '3rem 1rem',
+                      color: 'rgba(250, 247, 240, 0.5)',
+                    }}
+                  >
+                    <ShoppingBag size={42} style={{ margin: '0 auto 1rem', opacity: 0.35 }} />
+                    <p style={{ fontSize: '0.95rem', fontWeight: 600 }}>Your order is empty</p>
+                    <p style={{ fontSize: '0.8rem', marginTop: '0.35rem' }}>
+                      Browse our handcrafted chais and add your favorites!
+                    </p>
+                  </div>
+                ) : (
+                  Object.entries(cart).map(([id, qty]) => {
+                    const item = CHAI_ITEMS.find((c) => c.id === id);
+                    if (!item) return null;
+                    return (
+                      <div
+                        key={id}
+                        style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '16px',
+                          padding: '0.75rem 0.95rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.75rem',
+                        }}
+                      >
+                        {/* Thumbnail & Info */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            style={{
+                              width: '46px',
+                              height: '46px',
+                              objectFit: 'contain',
+                              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
+                            }}
+                          />
+                          <div>
+                            <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#FAF7F0' }}>
+                              {item.name}
+                            </h4>
+                            <span style={{ fontSize: '0.78rem', color: '#E5C384', fontWeight: 600 }}>
+                              ₹{item.price} each
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Stepper & Subtotal */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                              borderRadius: '999px',
+                              padding: '0.1rem',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(id, -1)}
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#FAF7F0',
+                                fontSize: '0.9rem',
+                              }}
+                            >
+                              –
+                            </button>
+                            <span
+                              style={{
+                                width: '20px',
+                                textAlign: 'center',
+                                fontSize: '0.82rem',
+                                fontWeight: 700,
+                                color: '#FAF7F0',
+                              }}
+                            >
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(id, 1)}
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#FAF7F0',
+                                fontSize: '0.9rem',
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-serif)',
+                              fontWeight: 800,
+                              fontSize: '1rem',
+                              color: '#FAF7F0',
+                              minWidth: '45px',
+                              textAlign: 'right',
+                            }}
+                          >
+                            ₹{item.price * qty}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(id)}
+                            style={{
+                              color: 'rgba(255, 255, 255, 0.4)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                            aria-label="Remove item"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Drawer Footer: Totals & Checkout */}
+            <div
+              style={{
+                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                paddingTop: '1.2rem',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '0.85rem',
+                  color: 'rgba(250, 247, 240, 0.65)',
+                  marginBottom: '0.4rem',
+                }}
+              >
+                <span>Subtotal</span>
+                <span style={{ fontWeight: 700, color: '#FAF7F0' }}>₹{cartSubtotal}</span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '0.85rem',
+                  color: 'rgba(250, 247, 240, 0.65)',
+                  marginBottom: '0.85rem',
+                }}
+              >
+                <span>Estimated GST (5%)</span>
+                <span style={{ fontWeight: 700, color: '#FAF7F0' }}>₹{taxes}</span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '1.15rem',
+                  fontWeight: 800,
+                  color: '#FAF7F0',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px dashed rgba(255, 255, 255, 0.15)',
+                  marginBottom: '1.2rem',
+                }}
+              >
+                <span>Grand Total</span>
+                <span style={{ color: '#E5C384', fontFamily: 'var(--font-serif)', fontSize: '1.35rem' }}>
+                  ₹{grandTotal}
+                </span>
+              </div>
+
+              {orderSuccess ? (
+                <div
+                  style={{
+                    backgroundColor: 'rgba(76, 175, 80, 0.25)',
+                    border: '1px solid rgba(76, 175, 80, 0.6)',
+                    borderRadius: '999px',
+                    padding: '0.85rem',
+                    textAlign: 'center',
+                    color: '#81C784',
+                    fontWeight: 800,
+                    fontSize: '0.92rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <Check size={18} strokeWidth={2.5} />
+                  <span>Order Placed! Chai is brewing ☕</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={totalCartCount === 0}
+                  onClick={() => {
+                    if (totalCartCount === 0) return;
+                    setOrderSuccess(true);
+                    setTimeout(() => {
+                      setOrderSuccess(false);
+                      setCart({});
+                      setIsCartOpen(false);
+                    }, 2200);
+                  }}
+                  style={{
+                    width: '100%',
+                    background:
+                      totalCartCount === 0
+                        ? 'rgba(255, 255, 255, 0.12)'
+                        : 'linear-gradient(135deg, #E5C384 0%, #C99D53 100%)',
+                    color: totalCartCount === 0 ? 'rgba(255, 255, 255, 0.35)' : '#172113',
+                    fontWeight: 800,
+                    fontSize: '0.95rem',
+                    letterSpacing: '0.04em',
+                    padding: '0.9rem',
+                    borderRadius: '999px',
+                    boxShadow: totalCartCount === 0 ? 'none' : '0 8px 25px rgba(229, 195, 132, 0.4)',
+                    cursor: totalCartCount === 0 ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.25s ease',
+                  }}
+                >
+                  Proceed to Checkout • ₹{grandTotal}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
