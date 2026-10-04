@@ -3,9 +3,9 @@ import './globals.css';
 import AppProviders from '@/components/providers/AppProviders';
 
 export const metadata: Metadata = {
-  title: 'CaféNova | Smart Café System',
+  title: 'Swayed Over Coffee | Artisanal Chai Experience',
   description:
-    'Integrated Café Management WebApp and Customer Digital Menu Card.',
+    'Handcrafted Indian Chai slow-brewed to perfection with freshly ground spices and single-origin Assam leaves.',
 };
 
 export default function RootLayout({
