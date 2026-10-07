@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Check, Trash2, X, Menu, Sparkles, MapPin, Clock, Instagram, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Check, Trash2, X, Menu, Sparkles, MapPin, Clock, Instagram, ArrowRight, ArrowLeft } from 'lucide-react';
 import { CHAI_ITEMS, ChaiItem } from './data/chaiData';
 import { BottomFlavorDial } from './components/BottomFlavorDial';
+import { CategoriesMenu } from './components/CategoriesMenu';
+import { MENU_CATEGORIES_DATA, MenuItem } from './data/categoriesData';
 
 const MENU_CATEGORIES = [
-  { id: 'chai', name: 'Artisanal Chai', isAvailable: true },
-  { id: 'coffee', name: 'Specialty Coffee', isAvailable: false },
-  { id: 'coldbrew', name: 'Cold Brews', isAvailable: false },
-  { id: 'bakes', name: 'Bakes & Bites', isAvailable: false },
-  { id: 'story', name: 'Our Story', isAvailable: false },
+  { id: 'categories', name: '← Categories Menu', isAvailable: true },
+  { id: 'chai', name: 'Milk Tea', isAvailable: true },
+  { id: 'coffee', name: 'Coffee', isAvailable: true },
+  { id: 'cold-drinks', name: 'Cold Drinks', isAvailable: true },
+  { id: 'bun-tastic', name: 'Bun-Tastic', isAvailable: true },
+  { id: 'quick-eats', name: 'Quick Eats', isAvailable: true },
 ];
 
 export default function App() {
+  const [currentView, setCurrentView] = useState<'categories' | 'build'>('categories');
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentIndexRef = useRef(currentIndex);
   currentIndexRef.current = currentIndex;
@@ -85,16 +89,39 @@ export default function App() {
   }, []);
 
   const handleCategoryClick = (cat: typeof MENU_CATEGORIES[0]) => {
+    if (cat.id === 'categories') {
+      setCurrentView('categories');
+      return;
+    }
     if (cat.id === 'chai') {
       // already on chai showcase
       return;
     }
-    if (cat.id === 'story') {
-      setIsMenuOpen(true);
-      return;
+    // Return to categories view to browse that category
+    setCurrentView('categories');
+  };
+
+  const getItemDetails = (id: string) => {
+    const chai = CHAI_ITEMS.find((c) => c.id === id);
+    if (chai) {
+      return { name: chai.name, price: chai.price, image: chai.image, icon: '☕' };
     }
-    setToastMessage(`${cat.name} brews arriving soon! Enjoy our handcrafted Chai showcase today ☕`);
-    setTimeout(() => setToastMessage(null), 3000);
+    for (const cat of MENU_CATEGORIES_DATA) {
+      const found = cat.items.find((item) => item.id === id);
+      if (found) {
+        return { name: found.name, price: found.price, icon: cat.icon };
+      }
+    }
+    return null;
+  };
+
+  const handleAddMenuItemToCart = (item: MenuItem, qty: number = 1) => {
+    setCart((prev) => ({
+      ...prev,
+      [item.id]: (prev[item.id] || 0) + qty,
+    }));
+    setCartBump(true);
+    setTimeout(() => setCartBump(false), 400);
   };
 
   // Add active chai to cart with celebratory particles
@@ -134,7 +161,7 @@ export default function App() {
 
   const totalCartCount = Object.values(cart).reduce((sum, q) => sum + q, 0);
   const cartSubtotal = Object.entries(cart).reduce((sum, [id, qty]) => {
-    const item = CHAI_ITEMS.find((c) => c.id === id);
+    const item = getItemDetails(id);
     return sum + (item ? item.price * qty : 0);
   }, 0);
   const taxes = Math.round(cartSubtotal * 0.05);
@@ -224,6 +251,430 @@ export default function App() {
     setPointerStartX(null);
   };
 
+  const renderCartDrawer = () => {
+    if (!isCartOpen) return null;
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 100,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          animation: 'fadeIn 0.25s ease',
+        }}
+        onClick={() => setIsCartOpen(false)}
+      >
+        <div
+          style={{
+            width: 'min(420px, 92vw)',
+            height: '100%',
+            backgroundColor: '#141C11',
+            backgroundImage: 'radial-gradient(circle at top right, rgba(229, 195, 132, 0.12) 0%, transparent 60%)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.14)',
+            padding: 'clamp(1.2rem, 3vh, 1.8rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.7)',
+            animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Drawer Header */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '1.2rem',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FAF7F0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '2px',
+                    border: '1px solid rgba(229, 195, 132, 0.5)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  <img
+                    src="/chai/soc_logo_bg.png"
+                    alt="Swayed Over Coffee"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--font-serif)',
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: '#FAF7F0',
+                      letterSpacing: '-0.01em',
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    Your Order
+                  </h3>
+                  <span style={{ fontSize: '0.72rem', color: '#E0CCA7', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Swayed Over Coffee
+                  </span>
+                </div>
+                <span
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    padding: '0.15rem 0.55rem',
+                    borderRadius: '999px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: '#E5C384',
+                    marginLeft: 'auto',
+                  }}
+                >
+                  {totalCartCount}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(false)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FAF7F0',
+                  cursor: 'pointer',
+                  border: 'none',
+                }}
+                aria-label="Close cart"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Cart Item List */}
+            <div
+              style={{
+                marginTop: '1.2rem',
+                maxHeight: 'calc(100vh - 310px)',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem',
+                paddingRight: '0.2rem',
+              }}
+            >
+              {Object.keys(cart).length === 0 ? (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '3rem 1rem',
+                    color: 'rgba(250, 247, 240, 0.5)',
+                  }}
+                >
+                  <ShoppingBag size={42} style={{ margin: '0 auto 1rem', opacity: 0.35 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600 }}>Your order is empty</p>
+                  <p style={{ fontSize: '0.8rem', marginTop: '0.35rem' }}>
+                    Browse our handcrafted categories and add your favorites!
+                  </p>
+                </div>
+              ) : (
+                Object.entries(cart).map(([id, qty]) => {
+                  const item = getItemDetails(id);
+                  if (!item) return null;
+                  return (
+                    <div
+                      key={id}
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '16px',
+                        padding: '0.75rem 0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                      }}
+                    >
+                      {/* Thumbnail & Info */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            style={{
+                              width: '46px',
+                              height: '46px',
+                              objectFit: 'contain',
+                              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '12px',
+                              background: 'rgba(229, 195, 132, 0.14)',
+                              border: '1px solid rgba(229, 195, 132, 0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1.4rem',
+                            }}
+                          >
+                            {item.icon}
+                          </div>
+                        )}
+                        <div>
+                          <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#FAF7F0' }}>
+                            {item.name}
+                          </h4>
+                          <span style={{ fontSize: '0.78rem', color: '#E5C384', fontWeight: 600 }}>
+                            ₹{item.price} each
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stepper & Subtotal */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '999px',
+                            padding: '0.1rem',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => updateCartQty(id, -1)}
+                            style={{
+                              width: '22px',
+                              height: '22px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#FAF7F0',
+                              fontSize: '0.9rem',
+                              border: 'none',
+                              background: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            –
+                          </button>
+                          <span
+                            style={{
+                              width: '20px',
+                              textAlign: 'center',
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              color: '#FAF7F0',
+                            }}
+                          >
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => updateCartQty(id, 1)}
+                            style={{
+                              width: '22px',
+                              height: '22px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#FAF7F0',
+                              fontSize: '0.9rem',
+                              border: 'none',
+                              background: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-serif)',
+                            fontWeight: 800,
+                            fontSize: '1rem',
+                            color: '#FAF7F0',
+                            minWidth: '45px',
+                            textAlign: 'right',
+                          }}
+                        >
+                          ₹{item.price * qty}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(id)}
+                          style={{
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            border: 'none',
+                            background: 'none',
+                          }}
+                          aria-label="Remove item"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Drawer Footer: Totals & Checkout */}
+          <div
+            style={{
+              borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+              paddingTop: '1.2rem',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.85rem',
+                color: 'rgba(250, 247, 240, 0.65)',
+                marginBottom: '0.4rem',
+              }}
+            >
+              <span>Subtotal</span>
+              <span style={{ fontWeight: 700, color: '#FAF7F0' }}>₹{cartSubtotal}</span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.85rem',
+                color: 'rgba(250, 247, 240, 0.65)',
+                marginBottom: '0.85rem',
+              }}
+            >
+              <span>Estimated GST (5%)</span>
+              <span style={{ fontWeight: 700, color: '#FAF7F0' }}>₹{taxes}</span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '1.15rem',
+                fontWeight: 800,
+                color: '#FAF7F0',
+                paddingTop: '0.75rem',
+                borderTop: '1px dashed rgba(255, 255, 255, 0.15)',
+                marginBottom: '1.2rem',
+              }}
+            >
+              <span>Grand Total</span>
+              <span style={{ color: '#E5C384', fontFamily: 'var(--font-serif)', fontSize: '1.35rem' }}>
+                ₹{grandTotal}
+              </span>
+            </div>
+
+            {orderSuccess ? (
+              <div
+                style={{
+                  backgroundColor: 'rgba(76, 175, 80, 0.25)',
+                  border: '1px solid rgba(76, 175, 80, 0.6)',
+                  borderRadius: '999px',
+                  padding: '0.85rem',
+                  textAlign: 'center',
+                  color: '#81C784',
+                  fontWeight: 800,
+                  fontSize: '0.92rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <Check size={18} strokeWidth={2.5} />
+                <span>Order Placed! Chai is brewing ☕</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={totalCartCount === 0}
+                onClick={() => {
+                  if (totalCartCount === 0) return;
+                  setOrderSuccess(true);
+                  setTimeout(() => {
+                    setOrderSuccess(false);
+                    setCart({});
+                    setIsCartOpen(false);
+                  }, 2200);
+                }}
+                style={{
+                  width: '100%',
+                  background:
+                    totalCartCount === 0
+                      ? 'rgba(255, 255, 255, 0.12)'
+                      : 'linear-gradient(135deg, #E5C384 0%, #C99D53 100%)',
+                  color: totalCartCount === 0 ? 'rgba(255, 255, 255, 0.35)' : '#172113',
+                  fontWeight: 800,
+                  fontSize: '0.95rem',
+                  letterSpacing: '0.04em',
+                  padding: '0.9rem',
+                  borderRadius: '999px',
+                  boxShadow: totalCartCount === 0 ? 'none' : '0 8px 25px rgba(229, 195, 132, 0.4)',
+                  cursor: totalCartCount === 0 ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  transition: 'all 0.25s ease',
+                }}
+              >
+                Proceed to Checkout • ₹{grandTotal}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (currentView === 'categories') {
+    return (
+      <>
+        <CategoriesMenu
+          onOpenBuild={() => setCurrentView('build')}
+          cart={cart}
+          onAddToCart={handleAddMenuItemToCart}
+          onUpdateCartQty={updateCartQty}
+          onOpenCart={() => setIsCartOpen(true)}
+        />
+        {renderCartDrawer()}
+      </>
+    );
+  }
+
   return (
     <div
       onTouchStart={onTouchStart}
@@ -311,37 +762,49 @@ export default function App() {
           width: '100%',
         }}
       >
-        {/* Brand: Bigger Official Logo */}
-        <div
-          style={{
-            width: 'clamp(62px, 7.8vw, 84px)',
-            height: 'clamp(62px, 7.8vw, 84px)',
-            borderRadius: '50%',
-            backgroundColor: '#FAF7F0',
-            backgroundImage: 'radial-gradient(circle, #FAF7F0 75%, #F4ECE0 100%)',
-            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(180, 140, 80, 0.18)',
-            border: '1.5px solid rgba(229, 195, 132, 0.65)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '3px',
-            flexShrink: 0,
-            cursor: 'pointer',
-            transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-          }}
-          onClick={() => setCurrentIndex(0)}
-          title="Swayed Over Coffee - Home"
-        >
-          <img
-            src="/chai/soc_logo_bg.png"
-            alt="Swayed Over Coffee Logo"
+        {/* Brand: Logo + Back to Categories Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.45rem, 1.2vw, 0.75rem)' }}>
+          <button
+            type="button"
+            onClick={() => setCurrentView('categories')}
+            className="back-to-categories-btn"
+            title="Return to Menu Categories"
+          >
+            <ArrowLeft size={16} />
+            <span>Categories</span>
+          </button>
+
+          <div
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              userSelect: 'none',
+              width: 'clamp(54px, 6.8vw, 72px)',
+              height: 'clamp(54px, 6.8vw, 72px)',
+              borderRadius: '50%',
+              backgroundColor: '#FAF7F0',
+              backgroundImage: 'radial-gradient(circle, #FAF7F0 75%, #F4ECE0 100%)',
+              boxShadow: '0 6px 24px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(180, 140, 80, 0.18)',
+              border: '1.5px solid rgba(229, 195, 132, 0.65)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '3px',
+              flexShrink: 0,
+              cursor: 'pointer',
+              transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
-          />
+            onClick={() => setCurrentView('categories')}
+            title="Swayed Over Coffee - Return to Categories Menu"
+          >
+            <img
+              src="/chai/soc_logo_bg.png"
+              alt="Swayed Over Coffee Logo"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                userSelect: 'none',
+              }}
+            />
+          </div>
         </div>
 
         {/* Desktop Central Menu Bar */}
@@ -710,6 +1173,39 @@ export default function App() {
 
                 <button
                   type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setCurrentView('categories');
+                  }}
+                  style={{
+                    backgroundColor: 'rgba(229, 195, 132, 0.22)',
+                    border: '1.5px solid rgba(229, 195, 132, 0.65)',
+                    borderRadius: '14px',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    color: '#FAF7F0',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <ArrowLeft size={17} color="#E5C384" />
+                    <div>
+                      <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#E5C384' }}>All Categories Menu</h4>
+                      <p style={{ fontSize: '0.78rem', color: 'rgba(250, 247, 240, 0.65)', marginTop: '2px' }}>
+                        Browse all 11 cafe categories &amp; items
+                      </p>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', backgroundColor: '#E5C384', color: '#172113', padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 800 }}>
+                    Menu
+                  </span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsMenuOpen(false)}
                   style={{
                     backgroundColor: 'rgba(229, 195, 132, 0.18)',
@@ -861,383 +1357,7 @@ export default function App() {
       )}
 
       {/* Slide-over Cart Drawer */}
-      {isCartOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            animation: 'fadeIn 0.25s ease',
-          }}
-          onClick={() => setIsCartOpen(false)}
-        >
-          <div
-            style={{
-              width: 'min(420px, 92vw)',
-              height: '100%',
-              backgroundColor: '#141C11',
-              backgroundImage: 'radial-gradient(circle at top right, rgba(229, 195, 132, 0.12) 0%, transparent 60%)',
-              borderLeft: '1px solid rgba(255, 255, 255, 0.14)',
-              padding: 'clamp(1.2rem, 3vh, 1.8rem)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.7)',
-              animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Drawer Header */}
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingBottom: '1.2rem',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      backgroundColor: '#FAF7F0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '2px',
-                      border: '1px solid rgba(229, 195, 132, 0.5)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    }}
-                  >
-                    <img
-                      src="/chai/soc_logo_bg.png"
-                      alt="Swayed Over Coffee"
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
-                  </div>
-                  <div>
-                    <h3
-                      style={{
-                        fontFamily: 'var(--font-serif)',
-                        fontSize: '1.25rem',
-                        fontWeight: 800,
-                        color: '#FAF7F0',
-                        letterSpacing: '-0.01em',
-                        lineHeight: 1.1,
-                      }}
-                    >
-                      Your Order
-                    </h3>
-                    <span style={{ fontSize: '0.72rem', color: '#E0CCA7', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Swayed Over Coffee
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                      padding: '0.15rem 0.55rem',
-                      borderRadius: '999px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: '#E5C384',
-                      marginLeft: 'auto',
-                    }}
-                  >
-                    {totalCartCount}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsCartOpen(false)}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FAF7F0',
-                    cursor: 'pointer',
-                  }}
-                  aria-label="Close cart"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Cart Item List */}
-              <div
-                style={{
-                  marginTop: '1.2rem',
-                  maxHeight: 'calc(100vh - 310px)',
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.85rem',
-                  paddingRight: '0.2rem',
-                }}
-              >
-                {Object.keys(cart).length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: '3rem 1rem',
-                      color: 'rgba(250, 247, 240, 0.5)',
-                    }}
-                  >
-                    <ShoppingBag size={42} style={{ margin: '0 auto 1rem', opacity: 0.35 }} />
-                    <p style={{ fontSize: '0.95rem', fontWeight: 600 }}>Your order is empty</p>
-                    <p style={{ fontSize: '0.8rem', marginTop: '0.35rem' }}>
-                      Browse our handcrafted chais and add your favorites!
-                    </p>
-                  </div>
-                ) : (
-                  Object.entries(cart).map(([id, qty]) => {
-                    const item = CHAI_ITEMS.find((c) => c.id === id);
-                    if (!item) return null;
-                    return (
-                      <div
-                        key={id}
-                        style={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '16px',
-                          padding: '0.75rem 0.95rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                        }}
-                      >
-                        {/* Thumbnail & Info */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            style={{
-                              width: '46px',
-                              height: '46px',
-                              objectFit: 'contain',
-                              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
-                            }}
-                          />
-                          <div>
-                            <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#FAF7F0' }}>
-                              {item.name}
-                            </h4>
-                            <span style={{ fontSize: '0.78rem', color: '#E5C384', fontWeight: 600 }}>
-                              ₹{item.price} each
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Stepper & Subtotal */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                              borderRadius: '999px',
-                              padding: '0.1rem',
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => updateCartQty(id, -1)}
-                              style={{
-                                width: '22px',
-                                height: '22px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#FAF7F0',
-                                fontSize: '0.9rem',
-                              }}
-                            >
-                              –
-                            </button>
-                            <span
-                              style={{
-                                width: '20px',
-                                textAlign: 'center',
-                                fontSize: '0.82rem',
-                                fontWeight: 700,
-                                color: '#FAF7F0',
-                              }}
-                            >
-                              {qty}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => updateCartQty(id, 1)}
-                              style={{
-                                width: '22px',
-                                height: '22px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#FAF7F0',
-                                fontSize: '0.9rem',
-                              }}
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          <span
-                            style={{
-                              fontFamily: 'var(--font-serif)',
-                              fontWeight: 800,
-                              fontSize: '1rem',
-                              color: '#FAF7F0',
-                              minWidth: '45px',
-                              textAlign: 'right',
-                            }}
-                          >
-                            ₹{item.price * qty}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(id)}
-                            style={{
-                              color: 'rgba(255, 255, 255, 0.4)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                            }}
-                            aria-label="Remove item"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Drawer Footer: Totals & Checkout */}
-            <div
-              style={{
-                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
-                paddingTop: '1.2rem',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '0.85rem',
-                  color: 'rgba(250, 247, 240, 0.65)',
-                  marginBottom: '0.4rem',
-                }}
-              >
-                <span>Subtotal</span>
-                <span style={{ fontWeight: 700, color: '#FAF7F0' }}>₹{cartSubtotal}</span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '0.85rem',
-                  color: 'rgba(250, 247, 240, 0.65)',
-                  marginBottom: '0.85rem',
-                }}
-              >
-                <span>Estimated GST (5%)</span>
-                <span style={{ fontWeight: 700, color: '#FAF7F0' }}>₹{taxes}</span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '1.15rem',
-                  fontWeight: 800,
-                  color: '#FAF7F0',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px dashed rgba(255, 255, 255, 0.15)',
-                  marginBottom: '1.2rem',
-                }}
-              >
-                <span>Grand Total</span>
-                <span style={{ color: '#E5C384', fontFamily: 'var(--font-serif)', fontSize: '1.35rem' }}>
-                  ₹{grandTotal}
-                </span>
-              </div>
-
-              {orderSuccess ? (
-                <div
-                  style={{
-                    backgroundColor: 'rgba(76, 175, 80, 0.25)',
-                    border: '1px solid rgba(76, 175, 80, 0.6)',
-                    borderRadius: '999px',
-                    padding: '0.85rem',
-                    textAlign: 'center',
-                    color: '#81C784',
-                    fontWeight: 800,
-                    fontSize: '0.92rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <Check size={18} strokeWidth={2.5} />
-                  <span>Order Placed! Chai is brewing ☕</span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={totalCartCount === 0}
-                  onClick={() => {
-                    if (totalCartCount === 0) return;
-                    setOrderSuccess(true);
-                    setTimeout(() => {
-                      setOrderSuccess(false);
-                      setCart({});
-                      setIsCartOpen(false);
-                    }, 2200);
-                  }}
-                  style={{
-                    width: '100%',
-                    background:
-                      totalCartCount === 0
-                        ? 'rgba(255, 255, 255, 0.12)'
-                        : 'linear-gradient(135deg, #E5C384 0%, #C99D53 100%)',
-                    color: totalCartCount === 0 ? 'rgba(255, 255, 255, 0.35)' : '#172113',
-                    fontWeight: 800,
-                    fontSize: '0.95rem',
-                    letterSpacing: '0.04em',
-                    padding: '0.9rem',
-                    borderRadius: '999px',
-                    boxShadow: totalCartCount === 0 ? 'none' : '0 8px 25px rgba(229, 195, 132, 0.4)',
-                    cursor: totalCartCount === 0 ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.25s ease',
-                  }}
-                >
-                  Proceed to Checkout • ₹{grandTotal}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {renderCartDrawer()}
     </div>
   );
 }
