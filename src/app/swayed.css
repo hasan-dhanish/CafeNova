@@ -1055,7 +1055,7 @@ button {
   height: max(100dvh, calc(100vw * (1952 / 941)));
   bottom: 0;
   left: 50%;
-  transform: translateX(-40%) translateY(20%) scale(1.22);
+  transform: translateX(-40%) translateY(5%) scale(1.22);
   transform-origin: center bottom;
   pointer-events: none;
   z-index: 0;
@@ -1209,6 +1209,7 @@ button {
   padding: 0 clamp(0.75rem, 2.5vw, 2.5rem);
   z-index: 10;
   overflow: visible;
+  transform: translateY(clamp(-25px, -4.5vh, -45px));
 }
 
 /* Left Image Column: Chai Glass elevated and heroic */
@@ -1234,7 +1235,7 @@ button {
 
 /* Chai Glass Image - Proportional to Unified Canvas */
 .split-glass-img {
-  height: clamp(210px, calc(max(100dvh, calc(100vw * (1952 / 941))) * 0.185), 360px);
+  height: clamp(230px, calc(max(100dvh, calc(100vw * (1952 / 941))) * 0.205), 380px);
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -1905,6 +1906,7 @@ button {
     padding: 0 0.65rem;
     align-items: center;
     pointer-events: none;
+    transform: translateY(clamp(-30px, -5vh, -55px));
   }
 
   .split-image-col.split-spacer-col {
@@ -1914,7 +1916,7 @@ button {
   }
 
   .split-glass-img {
-    height: clamp(210px, calc(max(100dvh, calc(100vw * (1952 / 941))) * 0.185), 360px);
+    height: clamp(230px, calc(max(100dvh, calc(100vw * (1952 / 941))) * 0.205), 380px);
   }
 
   .split-cards-col {
